@@ -47,4 +47,10 @@
 - **Scaling**: 수치형 변수(`Age`, `TotalSpending`, `Num` 등)에 대해 **StandardScaler** 적용하여 모델 학습 효율 증대.
 
 ### 5. 📊 모델 학습 및 평가
+- Random Forest, XGBoost, LightGBM, CatBoost, GBM으로 학습 및 평가를 해보고 하이퍼파라미터 튜닝을 진행합니다.
+- 튜닝 후 최종 앙상블을 구축합니다.
+- AutoGluon을 사용하여 최적의 모델을 구축합니다.
+
+### 6. 제출
+- 케글에 각 결과를 제출해보고 최고의 모델을 선정합니다.
 
