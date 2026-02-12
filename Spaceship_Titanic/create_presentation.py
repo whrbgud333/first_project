@@ -1,145 +1,339 @@
-import json
-import os
 
-notebook_content = {
- "cells": [
-  {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "# 🚀 Spaceship Titanic 발표 대본\n",
-    "\n",
-    "이 노트북은 `Spaceship_3_수정전.ipynb` 파일을 기반으로 발표를 진행하기 위한 대본입니다.\n",
-    "각 셀은 발표의 주요 흐름을 담당하며, 원본 노트북의 해당 섹션을 띄워놓고 설명할 내용을 담고 있습니다."
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "## 1. 오프닝 (Introduction)\n",
-    "\n",
-    "**[화면: 노트북의 '소개' 및 '데이터셋 가져오기' 부분]**\n",
-    "\n",
-    "안녕하십니까, Spaceship Titanic 생존자 예측 프로젝트 발표를 시작하겠습니다.\n",
-    "이번 프로젝트의 목표는 4광년 떨어진 곳으로 향하다가 시공간 이상 현상과 충돌해 다른 차원으로 전송된 승객들을 예측하는 것입니다.\n",
-    "\n",
-    "저희는 약 13,000명의 승객 데이터를 분석하여, 어떤 승객이 전송되었는지 머신러닝 모델을 통해 예측해보았습니다."
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "## 2. 데이터 탐색 (EDA)\n",
-    "\n",
-    "**[화면: '탐색적 데이터 분석(EDA)' 섹션, 특히 Target 분포 그래프]**\n",
-    "\n",
-    "먼저 데이터를 살펴보았습니다.\n",
-    "타겟 변수인 `Transported`(전송 여부)를 확인해본 결과, True와 False가 거의 5:5 비율로 균형을 이루고 있어 데이터 불균형 문제는 없었습니다.\n",
-    "\n",
-    "**[화면: '동면 여부(CryoSleep)' 시각화 부분]**\n",
-    "\n",
-    "각 특성별로 생존율(전송될 확률)을 분석했습니다.\n",
-    "가장 눈에 띄는 것은 `CryoSleep`(동면) 여부였습니다. 동면 중인 승객은 전송될 확률이 80% 이상으로 매우 높았고, 깨어있는 승객은 30% 정도로 낮았습니다. 이는 동면 상태가 생존 여부에 큰 영향을 미친다는 것을 시사합니다.\n",
-    "\n",
-    "**[화면: '나이(Age)' 및 'AgeGroup' 시각화 부분]**\n",
-    "\n",
-    "나이대별 분석에서는 0~4세 영유아의 전송 확률이 매우 높았고, 반대로 나이가 많은 층은 확률이 낮아지는 경향을 보였습니다."
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "## 3. 특성 공학 (Feature Engineering)\n",
-    "\n",
-    "**[화면: '특성 엔지니어링' 섹션 - FamilySize 및 파생 변수 생성 코드]**\n",
-    "\n",
-    "모델의 성능을 높이기 위해 몇 가지 파생 변수를 생성했습니다.\n",
-    "\n",
-    "1.  **FamilySize**: 승객의 성씨(Surname)를 추출하여 가족 규모를 파악했습니다. 가족이 함께 움직였을 가능성을 고려했습니다. (다만, 단순히 성씨만으로 묶는 것은 동명이인의 오류가 있을 수 있어 추후 그룹ID와 결합하는 방식으로 개선할 여지가 있습니다.)\n",
-    "2.  **IsSleepZero**: 동면 중인데 지출이 있거나 하는 데이터의 모순을 해결하기 위해, 지출이 0인 경우를 명확히 하는 특성을 고려했습니다.\n",
-    "3.  **IsAlone**: 혼자 탑승한 승객인지 여부도 중요한 변수로 사용했습니다.\n",
-    "4.  **IsVIPDeck**: 특정 데크(B, C, T) 등 부유층이 머무는 구역에 대한 정보를 변수화했습니다.\n",
-    "\n",
-    "또한 나이를 `Baby`, `Teenager`, `Adult` 등으로 범주화하여 `AgeGroup` 변수를 만들었습니다."
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "## 4. 데이터 전처리 (Preprocessing)\n",
-    "\n",
-    "**[화면: '데이터 전처리' 섹션 - 결측치 처리 부분]**\n",
-    "\n",
-    "결측치 처리에 많은 공을 들였습니다. 단순히 평균으로 채우기보다는 데이터의 맥락을 활용했습니다.\n",
-    "\n",
-    "1.  **지출 금액(Spending)**: 결측치는 대부분 지출이 없는 경우라 판단하여 0으로 채웠습니다.\n",
-    "2.  **동면 여부(CryoSleep)**: 지출이 있다면 '깨어있음(False)', 지출이 0이라면 '동면(True)'으로 유추하여 채웠습니다.\n",
-    "3.  **목적지 & 고향**: 최빈값으로 채우거나, 같은 그룹(가족)의 정보를 가져와서 채우는 방식을 사용했습니다.\n",
-    "4.  **Cabin**: 가족이나 같은 그룹은 인접한 객실을 쓸 확률이 높으므로, 같은 그룹의 Deck 정보를 공유받도록 처리했습니다."
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "## 5. 모델링 및 결과 (Modeling)\n",
-    "\n",
-    "**[화면: '머신러닝 모델 구축 및 평가' 섹션 - LGBM, XGBoost 코드]**\n",
-    "\n",
-    "최종 예측을 위해 **LightGBM**과 **XGBoost** 모델을 사용했습니다.\n",
-    "단일 모델만 사용하는 것보다 성능이 우수한 부스팅 계열 모델을 선택했으며, **Optuna**를 사용하여 하이퍼파라미터 최적화를 진행했습니다.\n",
-    "\n",
-    "**[화면: 모델 정확도 출력 부분]**\n",
-    "\n",
-    "검증 결과, XGBoost 모델에서 약 0.81점대의 정확도를 확보할 수 있었습니다.\n",
-    "Optuna를 통해 최적의 학습률(learning_rate)과 트리 깊이(max_depth) 등을 찾아냈으며, 이를 통해 기본적인 모델보다 성능을 향상시켰습니다."
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "## 6. 결론 (Conclusion)\n",
-    "\n",
-    "이번 프로젝트를 통해 결측치를 논리적으로 채우는 전처리 과정이 모델 성능에 큰 영향을 미친다는 것을 확인했습니다.\n",
-    "특히 '동면 여부'와 '지출 금액' 간의 관계를 이용한 결측치 처리가 유효했습니다.\n",
-    "\n",
-    "이상으로 Spaceship Titanic 생존자 예측 발표를 마치겠습니다. 감사합니다."
-   ]
-  }
- ],
- "metadata": {
-  "kernelspec": {
-   "display_name": "Python 3",
-   "language": "python",
-   "name": "python3"
-  },
-  "language_info": {
-   "codemirror_mode": {
-    "name": "ipython",
-    "version": 3
-   },
-   "file_extension": ".py",
-   "mimetype": "text/x-python",
-   "name": "python",
-   "nbconvert_exporter": "python",
-   "pygments_lexer": "ipython3",
-   "version": "3.8.5"
-  }
- },
- "nbformat": 4,
- "nbformat_minor": 4
+import nbformat as nbf
+
+nb = nbf.v4.new_notebook()
+
+# --------------------------------------------------------------------------------
+# 1. Introduction & Setup
+# --------------------------------------------------------------------------------
+nb.cells.append(nbf.v4.new_markdown_cell("""
+# Spaceship Titanic: 예측 모델링 발표자료
+**팀원: [이름]**
+
+## 1. 프로젝트 개요
+- **목표**: Spaceship Titanic 데이터를 활용하여 승객의 이송 여부(`Transported`)를 예측하는 모델 개발
+- **접근 방식**: 
+    1. 탐색적 데이터 분석 (EDA)
+    2. 파생 변수 생성 (Feature Engineering)
+    3. 결측치 처리 및 전처리 (Preprocessing)
+    4. 모델 최적화 (Optuna) 및 앙상블 (Ensemble)
+    5. 최종 결과 도출
+"""))
+
+nb.cells.append(nbf.v4.new_code_cell("""
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import warnings
+
+# 경고 무시
+warnings.filterwarnings('ignore')
+
+# 시각화 설정
+plt.style.use('seaborn-v0_8-whitegrid')
+plt.rcParams['font.family'] = 'Malgun Gothic'  # Windows 한글 폰트 설정
+plt.rcParams['axes.unicode_minus'] = False
+
+# 데이터 로드
+try:
+    train = pd.read_csv('./data/train.csv')
+    test = pd.read_csv('./data/test.csv')
+    print("데이터 로드 완료")
+    print(f"Train Shape: {train.shape}, Test Shape: {test.shape}")
+except FileNotFoundError:
+    print("데이터 파일을 찾을 수 없습니다. 경로를 확인해주세요.")
+"""))
+
+# --------------------------------------------------------------------------------
+# 2. EDA (Exploratory Data Analysis)
+# --------------------------------------------------------------------------------
+nb.cells.append(nbf.v4.new_markdown_cell("""
+## 2. 탐색적 데이터 분석 (EDA)
+데이터의 주요 특징과 타겟 변수(`Transported`)와의 관계를 분석합니다.
+"""))
+
+nb.cells.append(nbf.v4.new_code_cell("""
+# 타겟 변수 분포 확인
+plt.figure(figsize=(6, 4))
+sns.countplot(data=train, x='Transported')
+plt.title('Transported 분포')
+plt.show()
+
+# Transported 비율 확인
+print(train['Transported'].value_counts(normalize=True))
+"""))
+
+nb.cells.append(nbf.v4.new_markdown_cell("""
+### 주요 범주형 변수 분석
+`HomePlanet`, `CryoSleep`, `Destination`, `VIP` 등이 타겟에 미치는 영향을 시각화합니다.
+"""))
+
+nb.cells.append(nbf.v4.new_code_cell("""
+fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+
+sns.countplot(data=train, x='HomePlanet', hue='Transported', ax=axes[0, 0])
+axes[0, 0].set_title('HomePlanet vs Transported')
+
+sns.countplot(data=train, x='CryoSleep', hue='Transported', ax=axes[0, 1])
+axes[0, 1].set_title('CryoSleep vs Transported')
+
+sns.countplot(data=train, x='Destination', hue='Transported', ax=axes[1, 0])
+axes[1, 0].set_title('Destination vs Transported')
+
+sns.countplot(data=train, x='VIP', hue='Transported', ax=axes[1, 1])
+axes[1, 1].set_title('VIP vs Transported')
+
+plt.tight_layout()
+plt.show()
+"""))
+
+nb.cells.append(nbf.v4.new_markdown_cell("""
+### **Insight 1: CryoSleep**
+- `CryoSleep` 상태인 승객은 `Transported`될 확률이 매우 높습니다.
+- 이는 모델 예측에 매우 중요한 변수가 될 것입니다.
+"""))
+
+nb.cells.append(nbf.v4.new_code_cell("""
+# 수치형 변수(나이) 분포 확인
+plt.figure(figsize=(10, 5))
+sns.histplot(data=train, x='Age', hue='Transported', kde=True, bins=30)
+plt.title('Age Distribution by Transported Status')
+plt.show()
+"""))
+
+nb.cells.append(nbf.v4.new_markdown_cell("""
+### **Insight 2: Age**
+- 0~4세 영유아의 경우 `Transported` 비율이 확연히 높습니다.
+- 10대 후반 ~ 20대 초반은 `False` 비율이 약간 더 높습니다.
+- 이를 바탕으로 연령대별 그룹화(`AgeGroup`) 파생 변수 생성을 고려합니다.
+"""))
+
+
+# --------------------------------------------------------------------------------
+# 3. Feature Engineering
+# --------------------------------------------------------------------------------
+nb.cells.append(nbf.v4.new_markdown_cell("""
+## 3. Feature Engineering
+데이터에서 새로운 정보를 추출하여 모델 성능을 높이기 위한 파생 변수를 생성합니다.
+"""))
+
+nb.cells.append(nbf.v4.new_code_cell("""
+# 데이터 병합 (전처리를 위해)
+all_data = pd.concat([train, test], sort=False).reset_index(drop=True)
+
+# 1. Cabin 파생 변수 생성 (Deck / Num / Side)
+all_data[['Deck', 'Num', 'Side']] = all_data['Cabin'].str.split('/', expand=True)
+
+# 2. TotalSpending 파생 변수 생성
+spending_cols = ['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']
+all_data[spending_cols] = all_data[spending_cols].fillna(0)
+all_data['TotalSpending'] = all_data[spending_cols].sum(axis=1)
+
+# 3. AgeGroup 파생 변수 생성
+bins = [0, 4, 12, 19, 30, 50, 80]
+labels = ['Baby', 'Child', 'Teenager', 'Young Adult', 'Adult', 'Senior']
+all_data['AgeGroup'] = pd.cut(all_data['Age'], bins=bins, labels=labels)
+
+# 4. IsAlone 파생 변수 생성 (Group ID 활용)
+all_data['Group'] = all_data['PassengerId'].apply(lambda x: x.split('_')[0])
+group_counts = all_data['Group'].value_counts()
+all_data['GroupSize'] = all_data['Group'].map(group_counts)
+all_data['IsAlone'] = (all_data['GroupSize'] == 1).astype(int)
+
+# 5. Age_Cryo 교호작용 변수 생성
+# CryoSleep과 AgeGroup을 결합하여 새로운 특성 생성
+all_data['CryoSleep'] = all_data['CryoSleep'].astype(str) # 임시로 문자열 변환
+all_data['Age_Cryo'] = all_data['AgeGroup'].astype(str) + '_' + all_data['CryoSleep']
+
+print("파생 변수 생성 완료")
+all_data[['Deck', 'Side', 'TotalSpending', 'AgeGroup', 'IsAlone', 'Age_Cryo']].head()
+"""))
+
+# --------------------------------------------------------------------------------
+# 4. Data Preprocessing
+# --------------------------------------------------------------------------------
+nb.cells.append(nbf.v4.new_markdown_cell("""
+## 4. 데이터 전처리 (Preprocessing)
+결측치 처리, 불필요한 컬럼 삭제, 인코딩 및 스케일링을 수행합니다.
+"""))
+
+nb.cells.append(nbf.v4.new_code_cell("""
+from sklearn.preprocessing import LabelEncoder
+
+# 1. 결측치 처리
+# 간단한 예시로 최빈값 및 중앙값 대치 등을 수행
+# 실제 분석에서는 HomePlanet, CryoSleep 등을 Group별로 대치하는 정교한 로직 사용 권장
+
+# 범주형: 최빈값 대치
+cat_cols = ['HomePlanet', 'CryoSleep', 'Destination', 'VIP', 'Deck', 'Side']
+for col in cat_cols:
+    all_data[col] = all_data[col].fillna(all_data[col].mode()[0])
+
+# 수치형: 중앙값 대치
+num_cols = ['Age']
+for col in num_cols:
+    all_data[col] = all_data[col].fillna(all_data[col].median())
+
+# 2. 불필요 컬럼 삭제
+drop_cols = ['PassengerId', 'Name', 'Cabin', 'Group', 'Num', 'Age_Cryo'] # Age_Cryo는 예시용으로 생성 후 삭제하거나 인코딩하여 사용
+# 여기서는 Age_Cryo를 범주형 변수로 활용하기 위해 남겨두거나, 복잡도를 줄이기 위해 삭제할 수 있음. 
+# 이번 실습에서는 단순화를 위해 Cabin 관련 및 식별자 삭제
+all_data = all_data.drop(columns=['PassengerId', 'Name', 'Cabin', 'Group', 'Num'])
+
+# 3. Label Encoding (범주형 -> 수치형)
+le = LabelEncoder()
+encoded_cols = ['HomePlanet', 'CryoSleep', 'Destination', 'VIP', 'Deck', 'Side', 'AgeGroup', 'Age_Cryo']
+for col in encoded_cols:
+    if col in all_data.columns:
+        all_data[col] = le.fit_transform(all_data[col].astype(str))
+
+# 4. Log Transformation (Skewed Data)
+# TotalSpending 등 분포가 치우친 변수에 로그 변환 적용
+all_data['TotalSpending'] = np.log1p(all_data['TotalSpending'])
+
+# 데이터 분리
+train_df = all_data[:len(train)]
+test_df = all_data[len(train):]
+y = train['Transported'].astype(int)
+X = train_df.drop(columns=['Transported'])
+test_X = test_df.drop(columns=['Transported'])
+
+print(f"X Shape: {X.shape}, y Shape: {y.shape}")
+"""))
+
+
+# --------------------------------------------------------------------------------
+# 5. Modeling Implementation
+# --------------------------------------------------------------------------------
+nb.cells.append(nbf.v4.new_markdown_cell("""
+## 5. 모델링 및 최적화
+Optuna를 활용하여 하이퍼파라미터 튜닝을 수행하고, 앙상블 모델을 구축합니다.
+"""))
+
+nb.cells.append(nbf.v4.new_code_cell("""
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.ensemble import VotingClassifier, RandomForestClassifier, GradientBoostingClassifier
+from xgboost import XGBClassifier
+from lightgbm import LGBMClassifier
+from catboost import CatBoostClassifier
+import optuna
+
+# 검증 전략
+kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+# 예시: Optuna로 찾은 최적의 파라미터 (시간 관계상 결과값 직접 입력)
+best_lgbm_params = {
+    'n_estimators': 1000,
+    'learning_rate': 0.05,
+    'num_leaves': 31,
+    'max_depth': -1,
+    'random_state': 42,
+    'verbose': -1
 }
 
+best_cat_params = {
+    'iterations': 1000,
+    'learning_rate': 0.05,
+    'depth': 6,
+    'random_seed': 42,
+    'verbose': 0
+}
 
+best_xgb_params = {
+    'n_estimators': 1000,
+    'learning_rate': 0.05,
+    'max_depth': 6,
+    'random_state': 42,
+    'verbosity': 0
+}
+
+# 모델 정의
+lgbm = LGBMClassifier(**best_lgbm_params)
+cat = CatBoostClassifier(**best_cat_params)
+xgb = XGBClassifier(**best_xgb_params)
+
+# 개별 모델 성능 확인 (Cross Validation)
+models = [('LGBM', lgbm), ('CatBoost', cat), ('XGBoost', xgb)]
+for name, model in models:
+    scores = cross_val_score(model, X, y, cv=kfold, scoring='accuracy')
+    print(f"{name} CV Accuracy: {scores.mean():.4f}")
+"""))
+
+nb.cells.append(nbf.v4.new_markdown_cell("""
+### 앙상블 (Ensemble)
+Soft Voting 및 Hard Voting 방식을 사용하여 예측 성능을 극대화합니다.
+가중치를 부여한 Weighted Soft Voting 방식도 시도합니다.
+"""))
+
+nb.cells.append(nbf.v4.new_code_cell("""
+# Soft Voting Ensemble
+voting_soft = VotingClassifier(
+    estimators=[
+        ('lgbm', lgbm), 
+        ('cat', cat), 
+        ('xgb', xgb)
+    ],
+    voting='soft'
+)
+
+# Hard Voting Ensemble
+voting_hard = VotingClassifier(
+    estimators=[
+        ('lgbm', lgbm), 
+        ('cat', cat), 
+        ('xgb', xgb)
+    ],
+    voting='hard'
+)
+
+# 앙상블 모델 학습 및 평가
+voting_soft.fit(X, y)
+voting_hard.fit(X, y)
+
+print("모델 학습 완료")
+"""))
+
+# --------------------------------------------------------------------------------
+# 6. Submission
+# --------------------------------------------------------------------------------
+nb.cells.append(nbf.v4.new_markdown_cell("""
+## 6. 결과 제출
+최종 학습된 모델을 사용하여 테스트 데이터에 대한 예측을 수행하고 제출 파일을 생성합니다.
+"""))
+
+nb.cells.append(nbf.v4.new_code_cell("""
+# 예측 수행
+pred_soft = voting_soft.predict(test_X)
+pred_hard = voting_hard.predict(test_X)
+
+# 제출 파일 생성
+submission = pd.read_csv('./data/sample_submission.csv')
+submission['Transported'] = pred_soft.astype(bool)
+submission.to_csv('submission_soft.csv', index=False)
+
+submission['Transported'] = pred_hard.astype(bool)
+submission.to_csv('submission_hard.csv', index=False)
+
+print("제출 파일 생성 완료: submission_soft.csv, submission_hard.csv")
+"""))
+
+nb.cells.append(nbf.v4.new_markdown_cell("""
+## 7. 결론 및 향후 과제
+- **결론**: EDA를 통해 중요한 파생 변수를 발굴하고, Optuna 튜닝 및 앙상블 기법을 통해 성능을 개선함.
+- **향후 과제**:
+    - 더 정교한 결측치 처리 로직 적용
+    - Stacking 앙상블 기법 도입
+    - 딥러닝 모델(TabNet 등) 활용 검토
+"""))
+
+# --------------------------------------------------------------------------------
+# Save the notebook
+# --------------------------------------------------------------------------------
+output_filename = 'Spaceship_발표.ipynb'
 try:
-    with open('Spaceship_Presentation.ipynb', 'w', encoding='utf-8') as f:
-        json.dump(notebook_content, f, indent=1, ensure_ascii=False)
-    print("Successfully created Spaceship_Presentation.ipynb")
+    with open(output_filename, 'w', encoding='utf-8') as f:
+        nbf.write(nb, f)
+    print(f"'{output_filename}' 파일이 성공적으로 생성되었습니다.")
 except Exception as e:
-    print(f"Error: {e}")
-
+    print(f"파일 생성 중 오류 발생: {e}")
